@@ -1,0 +1,7 @@
+{
+  "name": "warband-ai-mod",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo 'Source files updated. Compile manually with your local build_module.bat script as per project setup.'"
+  }
+}
