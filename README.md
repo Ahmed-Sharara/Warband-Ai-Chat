@@ -1,71 +1,78 @@
-# Warband AI NPCs & Village Engagement Mod
+# Calradia Unified C# AI Bridge (v2.0.0)
 
+## Description
 This project connects Mount & Blade: Warband to AI language models. Instead of reading the exact same dialogue lines over and over, you can actually type to NPCs and get dynamic responses based on their character, faction, and role. 
 
-This isn't just text, either. The mod hooks into the game's actual mechanics. For example, if you threaten to burn a village or kill the inhabitants while talking to a Village Elder, the AI detects the threat, the script validates the NPC's role, and the game throws you straight into the battle/raid menu. 
+This isn't just text, either. The mod hooks into the game's actual mechanics. For example, if you threaten a Village Elder, the AI detects the threat and triggers the game's village raid screen. If you order your companion to go to a town, purchase an item (like swords, shields, or specific foods like smoked fish or chicken), and return, the AI companion dynamically schedules and executes this multi-step mission!
 
-I've provided three different Python scripts to run the bridge. You can run the AI locally on your own PC, use a cloud API for heavier models, or connect through Player2 for a free, account-based option.
+We have completely retired the old, error-prone Python bridge system. The project now runs on a modern, ultra-reliable **C# (.NET Core) Windows/Console App Bridge** with custom built-in GUI configuration.
 
-## How the bridge works
+---
 
-The game engine can't talk to AI models directly, so we use a fast file-reading trick. When you type a message to an NPC, the game's module scripts save your message, the NPC's name, their role, and their faction into a file called `To AI Chat.json`.
+## Key Features & Solved Problems in v2.0.0
 
-One of the Python scripts runs in the background and constantly watches that file. The moment you hit enter in-game, the script grabs the text, feeds it to the AI, cleans up any weird formatting from the response, and writes it to `From AI Chat.json`. The game instantly reads it back and makes the NPC speak.
+- **Dynamic GUI Configuration Form**: No more editing text files to paste API keys or change folder paths. On startup, the C# Bridge opens a polished settings window to configure your paths and model keys.
+- **Improved Item Mapping & Questing**: Fixed an issue where companions would travel to towns but fail to buy/give requested items (such as chickens, smoked fish, etc.). The C# bridge now dynamically parses the mod's `module_items.py` at runtime to match internal item indices. It also uses a robust, built-in fallback mapping for 25+ classic items:
+  - **Weapons & Gear**: Swords, Bows, Shields, Arrows, Spears, Axes, Maces, Armor, Horses.
+  - **Sustenance & Trade**: Smoked Fish, Chickens, Beef, Bread, Pork, Butter, Cheese, Honey, Ale, Wine, Grain, Grapes, Olives, Cabbages.
+- **Unified Location Coordinates Engine**: Translates town, village, and castle names directly to their in-game destination ID indices, ensuring your companion actually travels to the correct target settlement.
+- **Intelligent Multi-Step Quests**: Companions can handle complex, multi-segmented commands (e.g. *"Ride to Praven, bring me a sword, and meet me back here"*). The bridge compiles these commands into unified AI Action sequences: `[TASKS: Move|TownName, Fetch|ItemName, Return]` along with a programmatic `[MOVE_TownName]` tag.
+- **Clean Dialogue Generation**: Prevents the AI from repeating internal prompts, uttering meta-instructions, or generating run-together words.
+- **Zero Python Hassles**: Removed the need for installing Python, Pip extensions, or debugging Windows environment paths. Runs as a standalone compiled application.
 
-The python script also handles the logic for hostile actions. It specifically checks if you are talking to a Village Elder before allowing a village raid to trigger. If you try to threaten a King or a Lord with village raid dialogue, the script intercepts the hostile tag so you don't break the game state.
+---
 
-## Installation
+## Step-by-Step Installation & Setup
 
-You need Python 3 installed on your machine.
-Open your command prompt and install the dependencies:
+### 1. Requirements
+- Mount & Blade: Warband (WSE2 is highly recommended for optimal stability).
+- .NET Desktop Runtime 6.0+ (installed by default on most modern Windows PCs).
 
-```bash
-pip install requests watchdog
+### 2. Run the C# AI Bridge
+1. Simply run the pre-compiled executable (`CalradiaAiBridge.exe`) provided in your release folder. There is no need to compile or set up any code!
+2. Upon launch, a **Settings GUI Window** will greet you. Configure the following properties safely within the user-friendly editor:
+   - **WatchDir**: Provide the directory path to your active Mod folder (the folder containing your WSE2 structure where `To AI Chat.json` and `From AI Chat.json` are generated). By default, this points to your system documents folder.
+   - **DefaultMode**: Choose one of your preferred AI backends:
+     - `cloud`: Standard cloud mode using fast, robust OpenRouter models.
+     - `local`: Pure offline local mode (such as LM Studio or Ollama).
+     - `player2_api` / `player2_app`: Advanced multi-player/companion interactive platforms.
+   - **OpenRouterApiKey**: Enter your OpenRouter key (e.g. `sk-or-v1-...`) for cloud-based play.
+   - **CloudModelId**: Enter your preferred model (e.g., `google/gemini-2.0-flash-exp:free` or `openai/gpt-4o-mini`).
+   - **LocalApiUrl**: If running locally on LM Studio, point this to `http://localhost:1234/v1/chat/completions`.
+   - **LocalModelId**: Match the model name loaded inside your local LM Studio instance.
+3. Click the **Save Settings & Start Server** button. 
+4. The application window will close and launch a real-time console. The File Watcher is now active and actively monitoring the Calradian world!
+
+### 3. Compiling the Mod Files
+If you are integrating this mod system into your Mount & Blade directory:
+1. Copy the files inside the `module files mod` directory to your Warband Module System repository.
+2. Run your local `build_module.bat` to compile the script edits into `.txt` resources readable by the game engine.
+3. Launch Mount & Blade: Warband, locate an NPC (such as your Companion or a Village Elder), and select **"Chat with AI"** to start roleplaying!
+
+---
+
+## How It Works Behind the Scenes
+
+```
+ [Player types message in-game] 
+              │
+              ▼
+[Warband writes "To AI Chat.json" to WatchDir]
+              │
+              ▼
+[C# Bridge file-watcher captures event] ───► [Parses context: location, relations, roles, items]
+                                                        │
+                                                        ▼
+                                       [Translates inputs to specific game action tags]
+                                                        │
+                                                        ▼
+[Warband reads "From AI Chat.json" response] ◄─── [Writes response with action schemas]
+              │
+              ▼
+ [Action executes in-game (Raid or companion movement)]
 ```
 
-## Running the AI
+---
 
-You have three options depending on your setup. Make sure the `WATCH_DIR` variable in your chosen script points to the folder where you installed the mod files. For example:
-
-```
-C:\Users\YourName\Documents\Mount&Blade Warband WSE2\WSE\Native
-```
-
-### Option 1: Local Bridge (ai_bridge_local.py)
-Use this if you want to run a model locally on your own hardware using LM Studio. It's fully offline and great if you have the RAM for it.
-1. Download LM Studio and load up a fast model.
-2. Start the Local Server in LM Studio on port 1234.
-3. Run `python ai_bridge_local.py` in your terminal.
-4. Launch Warband.
-
-### Option 2: Cloud Bridge (ai_bridge_cloud.py)
-Use this if you want to connect to a cloud provider like OpenRouter to access massive models that you couldn't run locally. 
-1. Open up `ai_bridge_cloud.py` in a text editor.
-2. Paste your API key into the `OPENROUTER_API_KEY` variable.
-3. Run `python ai_bridge_cloud.py` in your terminal.
-4. Launch Warband.
-
-### Option 3: Player2 Bridge (ai_bridge_player2.py)
-Use this to connect through [Player2](https://player2.game), a free gaming AI platform. No need to manage API keys or run anything locally.
-
-Open `ai_bridge_player2.py` and set your mode at the top of the file:
-
-```python
-MODE = "app"  # "app" or "apikey"
-```
-
-**App mode** requires the Player2 desktop app running on your PC. It handles authentication automatically with no extra steps.
-
-**API key mode** uses a Player2 API key. If you leave `PLAYER2_API_KEY` empty, a browser window will open the first time so you can log in and generate one automatically. The key gets saved locally so you won't need to log in again.
-
-Then:
-1. Run `python ai_bridge_player2.py` in your terminal.
-2. Approve the login in your browser if prompted (first time only).
-3. Launch Warband.
-
-## Compiling the Mod Files
-
-If you want to tweak the game logic or rebuild the module:
-1. Drop the `module_*.py` files into your Warband Module System folder.
-2. Run your `build_module.bat` to compile the changes into text files for the game engine.
-3. Start the Python bridge, load up the game, and go talk to an NPC.
+## Shout Outs
+Special thanks to the TaleWorlds team for Mount & Blade, the creators of Warband Script Enhancer 2, and the open-source community powering modular gaming integrations!
