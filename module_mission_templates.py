@@ -2510,6 +2510,35 @@ mission_templates = [
      [
       common_ai_chat_opener, # <--- ADD IT RIGHT HERE!
 
+       # --- SPAWN WAITING COMPANIONS IN VILLAGE CENTER ---
+       (0.1, 0, ti_once, [],
+       [
+         (store_current_scene, ":cur_scene"),
+         (modify_visitors_at_site, ":cur_scene"),
+         (assign, ":entry_point", 17),
+         # Disabled to prevent duplicate companion spawns in towns
+         (try_begin),
+           (eq, 1, 0),
+         (try_end),
+       ]),
+
+       # --- SPAWN WAITING COMPANIONS IN TAVERN ---
+       (0.1, 0, ti_once, [],
+       [
+         (eq, "$talk_context", tc_tavern_talk),
+         (store_current_scene, ":cur_scene"),
+         (modify_visitors_at_site, ":cur_scene"),
+         (assign, ":entry_point", 17),
+         (try_for_range, ":companion", companions_begin, companions_end),
+           (neg|main_party_has_troop, ":companion"),
+           (troop_slot_eq, ":companion", slot_troop_cur_center, "$current_town"),
+           (add_visitors_to_current_scene, ":entry_point", ":companion", 1, 0, 0),
+           (val_add, ":entry_point", 1),
+           (str_store_troop_name, s1, ":companion"),
+           (display_message, "@[DEBUG] Companion {s1} spawned in tavern."),
+         (try_end),
+       ]),
+
       (1, 0, ti_once, [],
       [
         (store_current_scene, ":cur_scene"),
@@ -2875,6 +2904,22 @@ mission_templates = [
     [
         common_ai_chat_opener,
 
+       # --- SPAWN WAITING COMPANIONS IN TOWN CENTER ---
+       (0.1, 0, ti_once, [],
+       [
+         (store_current_scene, ":cur_scene"),
+         (modify_visitors_at_site, ":cur_scene"),
+         (assign, ":entry_point", 17),
+         (try_for_range, ":companion", companions_begin, companions_end),
+           (neg|main_party_has_troop, ":companion"),
+           (troop_slot_eq, ":companion", slot_troop_cur_center, "$current_town"),
+           (add_visitors_to_current_scene, ":entry_point", ":companion", 1, 0, 0),
+           (val_add, ":entry_point", 1),
+           (str_store_troop_name, s1, ":companion"),
+           (display_message, "@[DEBUG] Companion {s1} spawned in town center."),
+         (try_end),
+       ]),
+
       (ti_on_agent_spawn, 0, 0, [],
       [
         (store_trigger_param_1, ":agent_no"),
@@ -3148,6 +3193,19 @@ mission_templates = [
           (scene_set_slot, ":cur_scene", slot_scene_visited, 1),
           (call_script, "script_init_town_walker_agents"),
           (call_script, "script_music_set_situation_with_culture", mtf_sit_travel),
+
+          # --- SPAWN WAITING COMPANIONS IN VILLAGE CENTER ---
+          (store_current_scene, ":cur_scene"),
+          (modify_visitors_at_site, ":cur_scene"),
+          (assign, ":entry_point", 11),
+          (try_for_range, ":companion", companions_begin, companions_end),
+            (neg|main_party_has_troop, ":companion"),
+            (troop_slot_eq, ":companion", slot_troop_cur_center, "$current_town"),
+            (add_visitors_to_current_scene, ":entry_point", ":companion", 1, 0, 0),
+            (val_add, ":entry_point", 1),
+            (str_store_troop_name, s1, ":companion"),
+            (display_message, "@[DEBUG] Companion {s1} spawned in village near elder."),
+          (try_end),
         ]),
       (ti_before_mission_start, 0, 0, [], [(call_script, "script_change_banners_and_chest")]),
       (ti_inventory_key_pressed, 0, 0, [
@@ -5006,6 +5064,22 @@ mission_templates = [
         (mission_enable_talk),
         (finish_mission, 0),
       ]),
+
+       # --- SPAWN WAITING COMPANIONS IN CASTLE HALL ---
+       (0.1, 0, ti_once, [],
+       [
+         (store_current_scene, ":cur_scene"),
+         (modify_visitors_at_site, ":cur_scene"),
+         (assign, ":entry_point", 17),
+         (try_for_range, ":companion", companions_begin, companions_end),
+           (neg|main_party_has_troop, ":companion"),
+           (troop_slot_eq, ":companion", slot_troop_cur_center, "$current_town"),
+           (add_visitors_to_current_scene, ":entry_point", ":companion", 1, 0, 0),
+           (val_add, ":entry_point", 1),
+           (str_store_troop_name, s1, ":companion"),
+           (display_message, "@[DEBUG] Companion {s1} spawned in castle."),
+         (try_end),
+       ]),
     ],
   ),
 
