@@ -29,7 +29,7 @@ We have completely retired the old, error-prone Python bridge system. The projec
 - .NET Desktop Runtime 6.0+ (installed by default on most modern Windows PCs).
 
 ### 2. Run the C# AI Bridge
-1. Simply run the pre-compiled executable (`CalradiaAiBridge.exe`) provided in your release folder. There is no need to compile or set up any code!
+1. Simply run the pre-compiled executable (`Ai_bridge_system-4.7.exe`) provided in your release folder. There is no need to compile or set up any code!
 2. Upon launch, a **Settings GUI Window** will greet you. Configure the following properties safely within the user-friendly editor:
    - **WatchDir**: Provide the directory path to your active Mod folder (the folder containing your WSE2 structure where `To AI Chat.json` and `From AI Chat.json` are generated). By default, this points to your system documents folder.
    - **DefaultMode**: Choose one of your preferred AI backends:
