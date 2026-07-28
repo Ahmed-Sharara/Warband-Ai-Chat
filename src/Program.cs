@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
+using System.Text.Json;
 using System.Windows.Forms;
 using System;
 
@@ -15,6 +15,7 @@ namespace CalradiaAiBridge {
         static string DefaultMode = "";
         static string OpenRouterApiKey = "";
         static string CloudModelId = "";
+        static string CloudAPIEndpoint = "";
         static string LocalApiUrl = "";
         static string LocalModelId = "";
         static string Player2ApiKey = "";
@@ -50,7 +51,7 @@ namespace CalradiaAiBridge {
 
         static double Cooldown = 0.5;
         static HttpClient _http = new HttpClient();
-        static JavaScriptSerializer _json = new JavaScriptSerializer();
+        static JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         static string _lastMsgHash = "";
         static DateTime _lastProcessedTime = DateTime.MinValue;
         static Dictionary<string, List<Dictionary<string, string>>> _memoryDb = new Dictionary<string, List<Dictionary<string, string>>>();
@@ -135,7 +136,7 @@ namespace CalradiaAiBridge {
                 if (File.Exists(ConfigFile)) {
                     try {
                         var jsonStr = File.ReadAllText(ConfigFile);
-                        var parsed = _json.Deserialize<AppConfig>(jsonStr);
+                        var parsed = JsonSerializer.Deserialize<AppConfig>(jsonStr);
                         if (parsed != null) config = parsed;
                     } catch { }
                 }
@@ -154,7 +155,7 @@ namespace CalradiaAiBridge {
                     var btnStart = new Button() { Text = "Save Settings && Start Server", Dock = DockStyle.Fill, BackColor = Color.LightGreen, Font = new Font(form.Font, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
 
                     btnStart.Click += ( s, e ) => {
-                        try { File.WriteAllText(ConfigFile, _json.Serialize(config)); } catch { }
+                        try { File.WriteAllText(ConfigFile, JsonSerializer.Serialize(config)); } catch { }
                         shouldStart = true;
                         form.Close();
                     };
@@ -174,6 +175,7 @@ namespace CalradiaAiBridge {
                 // Apply logic
                 DefaultMode = config.DefaultMode.ToString();
                 OpenRouterApiKey = config.OpenRouterApiKey;
+                CloudAPIEndpoint = config.CloudAPIEndpoint;
                 CloudModelId = config.CloudModelId;
                 LocalApiUrl = config.LocalApiUrl;
                 LocalModelId = config.LocalModelId;

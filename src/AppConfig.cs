@@ -18,11 +18,14 @@ namespace CalradiaAiBridge {
         [Category("1. General")]
         [Description("Path to your Mount & Blade Native directory")]
         public string WatchDir { get; set; } = @"C:\Users\YOUR_PC_NAME\Documents\Mount&Blade Warband WSE2\WSE\Native";
-
         [Category("2. Cloud Settings")]
-        public string OpenRouterApiKey { get; set; } = "";
+        [Description("URL for your chosen API endpoint (SHOULD END WITH /v1/chat/completions).")]
+        public string CloudAPIEndpoint { get; set; } = "";
         [Category("2. Cloud Settings")]
         public string CloudModelId { get; set; } = "openai/gpt-oss-120b:free";
+        [Category("2. Cloud Settings")]
+        [Description("API key for your chosen endpoint.")]
+        public string OpenRouterApiKey { get; set; } = "";
 
         [Category("3. Local Settings")]
         public string LocalApiUrl { get; set; } = "http://localhost:1234/v1/chat/completions";

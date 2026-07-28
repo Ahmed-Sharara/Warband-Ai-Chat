@@ -5,11 +5,11 @@ using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
+using System.Text.Json;
 
 namespace CalradiaAiBridge {
     public static class AutoUpdater {
-        public const string CurrentVersion = "2.0.0";
+        public const string CurrentVersion = "2.0.1";
 
         private const string GitHubRepo = "Ahmed-Sharara/Warband-Ai-Chat";
 
@@ -97,8 +97,7 @@ del ""%~f0""
 
         private static string ExtractTagName( string jsonResponse ) {
             try {
-                var serializer = new JavaScriptSerializer();
-                var jsonDict = serializer.Deserialize<Dictionary<string, object>>(jsonResponse);
+                var jsonDict = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonResponse);
                 if (jsonDict != null && jsonDict.ContainsKey("tag_name") && jsonDict["tag_name"] != null) {
                     return jsonDict["tag_name"].ToString();
                 }
@@ -115,8 +114,7 @@ del ""%~f0""
 
         private static string ExtractExeDownloadUrl( string jsonResponse ) {
             try {
-                var serializer = new JavaScriptSerializer();
-                var jsonDict = serializer.Deserialize<Dictionary<string, object>>(jsonResponse);
+                var jsonDict = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonResponse);
                 if (jsonDict != null && jsonDict.ContainsKey("assets")) {
                     var assetsList = jsonDict["assets"] as System.Collections.ArrayList;
                     if (assetsList != null) {

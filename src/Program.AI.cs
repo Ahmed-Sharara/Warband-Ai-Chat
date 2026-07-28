@@ -5,13 +5,14 @@ using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json;
 using System.Windows.Forms;
 using System;
 
 namespace CalradiaAiBridge {
     partial class Program {
         static async Task<string> SendWebRequest( string url, object reqBody, string bearer = null ) {
-            var content = new StringContent(_json.Serialize(reqBody), Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonSerializer.Serialize(reqBody), Encoding.UTF8, "application/json");
 
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Headers.Add("player2-game-key", GameClientId);
@@ -67,8 +68,8 @@ namespace CalradiaAiBridge {
             };
 
             try {
-                string resStr = await SendWebRequest("https://openrouter.ai/api/v1/chat/completions", reqBody, OpenRouterApiKey);
-                var json = _json.Deserialize<Dictionary<string, object>>(resStr);
+                string resStr = await SendWebRequest(CloudAPIEndpoint, reqBody, OpenRouterApiKey);
+                var json = JsonSerializer.Deserialize<Dictionary<string, object>>(resStr);
 
                 string aiReply = "...";
                 if (json != null && json.ContainsKey("choices")) {
@@ -132,7 +133,7 @@ namespace CalradiaAiBridge {
 
             try {
                 string resStr = await SendWebRequest(LocalApiUrl, reqBody);
-                var json = _json.Deserialize<Dictionary<string, object>>(resStr);
+                var json = JsonSerializer.Deserialize<Dictionary<string, object>>(resStr);
 
                 string aiReply = "...";
                 if (json != null && json.ContainsKey("choices")) {
@@ -201,10 +202,10 @@ namespace CalradiaAiBridge {
                 {"game", "warband"}
             };
 
-            Console.WriteLine("[DEBUG] Sending payload: " + _json.Serialize(reqBody));
+            Console.WriteLine("[DEBUG] Sending payload: " + JsonSerializer.Serialize(reqBody));
 
             try {
-                var content = new StringContent(_json.Serialize(reqBody), Encoding.UTF8, "application/json");
+                var content = new StringContent(JsonSerializer.Serialize(reqBody), Encoding.UTF8, "application/json");
 
                 string chatUrl = _currentBridgeMode == "player2_app" ? $"http://127.0.0.1:{GetPlayer2AppPort()}/v1/chat/completions" : P2ChatUrl;
                 var request = new HttpRequestMessage(HttpMethod.Post, chatUrl);
@@ -233,7 +234,7 @@ namespace CalradiaAiBridge {
                                 if (dataStr == "[DONE]") break;
 
                                 try {
-                                    var chunk = _json.Deserialize<Dictionary<string, object>>(dataStr);
+                                    var chunk = JsonSerializer.Deserialize<Dictionary<string, object>>(dataStr);
                                     if (chunk != null && chunk.ContainsKey("choices")) {
                                         Dictionary<string, object> firstChoice = null;
                                         if (chunk["choices"] is object[] arr && arr.Length > 0) firstChoice = arr[0] as Dictionary<string, object>;
@@ -253,7 +254,7 @@ namespace CalradiaAiBridge {
                                 } catch { }
                             } else if (line.StartsWith("{")) {
                                 try {
-                                    var json = _json.Deserialize<Dictionary<string, object>>(line);
+                                    var json = JsonSerializer.Deserialize<Dictionary<string, object>>(line);
                                     if (json != null && json.ContainsKey("choices")) {
                                         Dictionary<string, object> firstChoice = null;
                                         if (json["choices"] is object[] arr && arr.Length > 0) firstChoice = arr[0] as Dictionary<string, object>;

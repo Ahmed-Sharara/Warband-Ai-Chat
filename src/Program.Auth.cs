@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -51,7 +52,7 @@ namespace CalradiaAiBridge {
             try {
                 var reqBody = new Dictionary<string, object> { { "client_id", GameClientId } };
                 string resStr = await SendWebRequest(P2DeviceNew, reqBody);
-                data = _json.Deserialize<Dictionary<string, object>>(resStr);
+                data = JsonSerializer.Deserialize<Dictionary<string, object>>(resStr);
             } catch (Exception ex) {
                 Console.WriteLine("[AUTH] ERROR starting login flow: " + ex.Message);
                 Environment.Exit(1);
@@ -91,7 +92,7 @@ namespace CalradiaAiBridge {
                         { "grant_type", "urn:ietf:params:oauth:grant-type:device_code" }
                     };
 
-                    var content = new StringContent(_json.Serialize(reqBody), Encoding.UTF8, "application/json");
+                    var content = new StringContent(JsonSerializer.Serialize(reqBody), Encoding.UTF8, "application/json");
                     var request = new HttpRequestMessage(HttpMethod.Post, P2DeviceToken);
                     request.Headers.Add("player2-game-key", GameClientId);
                     request.Content = content;
@@ -99,7 +100,7 @@ namespace CalradiaAiBridge {
 
                     if (res.IsSuccessStatusCode) {
                         var resStr = await res.Content.ReadAsStringAsync();
-                        var json = _json.Deserialize<Dictionary<string, object>>(resStr);
+                        var json = JsonSerializer.Deserialize<Dictionary<string, object>>(resStr);
                         if (json != null && json.ContainsKey("p2Key") && json["p2Key"] != null) {
                             string key = json["p2Key"].ToString();
                             if (!string.IsNullOrEmpty(key)) {
@@ -124,7 +125,7 @@ namespace CalradiaAiBridge {
                     r.EnsureSuccessStatusCode();
 
                     var resStr = await r.Content.ReadAsStringAsync();
-                    var json = _json.Deserialize<Dictionary<string, object>>(resStr);
+                    var json = JsonSerializer.Deserialize<Dictionary<string, object>>(resStr);
 
                     if (json != null && json.ContainsKey("p2Key") && json["p2Key"] != null) {
                         _p2Key = json["p2Key"].ToString();
