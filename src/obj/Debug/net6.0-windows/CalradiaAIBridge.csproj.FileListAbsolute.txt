@@ -1,0 +1,15 @@
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.GeneratedMSBuildEditorConfig.editorconfig
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.AssemblyInfoInputs.cache
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.AssemblyInfo.cs
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.csproj.CoreCompileInputs.cache
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.sourcelink.json
+D:\AIstuff\Warband-Ai-Chat\src\bin\Debug\net6.0-windows\CalradiaAIBridge.exe
+D:\AIstuff\Warband-Ai-Chat\src\bin\Debug\net6.0-windows\CalradiaAIBridge.deps.json
+D:\AIstuff\Warband-Ai-Chat\src\bin\Debug\net6.0-windows\CalradiaAIBridge.runtimeconfig.json
+D:\AIstuff\Warband-Ai-Chat\src\bin\Debug\net6.0-windows\CalradiaAIBridge.dll
+D:\AIstuff\Warband-Ai-Chat\src\bin\Debug\net6.0-windows\CalradiaAIBridge.pdb
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.dll
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\refint\CalradiaAIBridge.dll
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.pdb
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\CalradiaAIBridge.genruntimeconfig.cache
+D:\AIstuff\Warband-Ai-Chat\src\obj\Debug\net6.0-windows\ref\CalradiaAIBridge.dll
