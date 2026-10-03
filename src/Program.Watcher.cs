@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System;
@@ -39,7 +40,7 @@ namespace CalradiaAiBridge {
                 if (string.IsNullOrWhiteSpace(jsonStr)) return;
 
                 Dictionary<string, object> data = null;
-                try { data = _json.Deserialize<Dictionary<string, object>>(jsonStr); } catch { return; }
+                try { data = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonStr); } catch { return; }
 
                 string msg = "";
                 if (data != null && data.ContainsKey("message") && data["message"] != null) {
@@ -260,13 +261,13 @@ namespace CalradiaAiBridge {
 
                 for (int i = 0; i < 5; i++) {
                     try {
-                        File.WriteAllText(OutputFile, _json.Serialize(outData));
+                        File.WriteAllText(OutputFile, JsonSerializer.Serialize(outData));
                         break;
                     } catch (IOException) { await Task.Delay(10); }
                 }
 
                 if (_currentBridgeMode != "player2_hotseat")
-                    Console.WriteLine(string.Format("[SUCCESS] AI Answered: \"{0}\" | Actions: {1}", cleanSansTags, _json.Serialize(outData)));
+                    Console.WriteLine(string.Format("[SUCCESS] AI Answered: \"{0}\" | Actions: {1}", cleanSansTags, JsonSerializer.Serialize(outData)));
                 else
                     Console.WriteLine(string.Format("[SUCCESS] Player 2 Answer sent to Calradia! Response: \"{0}\"", cleanSansTags));
 
