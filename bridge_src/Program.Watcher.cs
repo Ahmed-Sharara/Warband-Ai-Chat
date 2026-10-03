@@ -10,16 +10,22 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System;
 
-namespace CalradiaAiBridge {
-    partial class Program {
-        static async void OnFileChanged( object sender, FileSystemEventArgs e ) {
-            if (string.Equals(e.FullPath, InputFile, StringComparison.OrdinalIgnoreCase)) {
+namespace CalradiaAiBridge
+{
+    partial class Program
+    {
+        static async void OnFileChanged(object sender, FileSystemEventArgs e)
+        {
+            if (string.Equals(e.FullPath, InputFile, StringComparison.OrdinalIgnoreCase))
+            {
                 await ProcessRequestAsync();
             }
         }
 
-        static async Task ProcessRequestAsync() {
-            try {
+        static async Task ProcessRequestAsync()
+        {
+            try
+            {
                 if ((DateTime.UtcNow - _lastProcessedTime).TotalSeconds < Cooldown) return;
                 await Task.Delay(50); // Small debounce
 
@@ -27,39 +33,52 @@ namespace CalradiaAiBridge {
 
                 string jsonStr = "";
                 // Read with retry for file locks
-                for (int i = 0; i < 5; i++) {
-                    try {
+                for (int i = 0; i < 5; i++)
+                {
+                    try
+                    {
                         using (var fs = new FileStream(InputFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                        using (var sr = new StreamReader(fs, Encoding.UTF8)) {
+                        using (var sr = new StreamReader(fs, Encoding.UTF8))
+                        {
                             jsonStr = await sr.ReadToEndAsync();
                         }
                         break;
-                    } catch (IOException) { await Task.Delay(10); }
+                    }
+                    catch (IOException) { await Task.Delay(10); }
                 }
 
                 if (string.IsNullOrWhiteSpace(jsonStr)) return;
 
                 Dictionary<string, object> data = null;
-                try { data = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonStr); } catch { return; }
+                try { data = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonStr); }
+                catch { return; }
 
                 string msg = "";
-                if (data != null && data.ContainsKey("message") && data["message"] != null) {
+                if (data != null && data.ContainsKey("message") && data["message"] != null)
+                {
                     msg = data["message"].ToString().Trim();
                 }
-
+                
                 if (string.IsNullOrEmpty(msg)) return;
 
                 string currentHash = CreateMD5(msg);
-                if (currentHash == _lastMsgHash) return;
+                if (currentHash == _lastMsgHash && (DateTime.UtcNow - _lastProcessedTime).TotalSeconds < 2) return;
                 _lastMsgHash = currentHash;
                 _lastProcessedTime = DateTime.UtcNow;
 
+                string speaker = data != null && data.ContainsKey("name") && data["name"] != null ? data["name"].ToString() : "NPC";
+                string roleStr = data != null && data.ContainsKey("role") && data["role"] != null ? data["role"].ToString() : "Unknown";
+                Console.WriteLine(string.Format("\n[INCOMING] Player to {0} ({1}): \"{2}\"", speaker, roleStr, msg));
+
                 // Clear input file
-                for (int i = 0; i < 5; i++) {
-                    try {
+                for (int i = 0; i < 5; i++)
+                {
+                    try
+                    {
                         File.WriteAllText(InputFile, "{}");
                         break;
-                    } catch (IOException) { await Task.Delay(10); }
+                    }
+                    catch (IOException) { await Task.Delay(10); }
                 }
 
                 string responseText;
@@ -76,6 +95,13 @@ namespace CalradiaAiBridge {
                 if (cleanResponse.Contains("[RELATION_DOWN]")) relDec = 1;
                 if (cleanResponse.Contains("[RELATION_UP]")) relInc = 1;
 
+                // Safety guard: if both tags exist, it was a prompt instruction reflection, ignore both
+                if (relDec == 1 && relInc == 1)
+                {
+                    relDec = 0;
+                    relInc = 0;
+                }
+
                 var outData = new Dictionary<string, object>
                 {
                     {"response", cleanResponse},
@@ -90,15 +116,16 @@ namespace CalradiaAiBridge {
                 string role = data != null && data.ContainsKey("role") && data["role"] != null ? data["role"].ToString().ToLower() : "commoner";
                 string name = data != null && data.ContainsKey("name") && data["name"] != null ? data["name"].ToString().ToLower() : "";
                 string locationStr = data != null && data.ContainsKey("location") && data["location"] != null ? data["location"].ToString().ToLower() : "";
-
+                
                 bool isCompanion = role == "companion" || role.Contains("companion") || role.Contains("member");
                 bool isElder = name.Contains("elder") || role.Contains("elder");
                 bool isWorldMap = locationStr.Contains("world map") || locationStr.Contains("camp");
-
+                
                 string[] threats = { "burn", "killing", "raid", "destroy", "attack", "to arms" };
                 bool isThreat = threats.Any(w => msgLower.Contains(w));
 
-                if (isCompanion) {
+                if (isCompanion)
+                {
                     string[] hateWords = { "hate you", "despise you", "dislike you", "hate", "scum" };
                     if (hateWords.Any(w => msgLower.Contains(w))) outData["relationDecrease"] = 1;
                 }
@@ -112,13 +139,18 @@ namespace CalradiaAiBridge {
                 var match = Regex.Match(cleanResponse, @"\[MOVE_([A-Za-z_]+)\]", RegexOptions.IgnoreCase);
                 string detectedTownName = null;
 
-                if (match.Success) {
+                if (match.Success)
+                {
                     detectedTownName = match.Groups[1].Value.ToLower().Replace("_", " ");
                     hasMoveIntent = true;
-                } else {
+                }
+                else
+                {
                     string searchText = string.Format("{0} {1}", msgLower, cleanResponse.ToLower());
-                    foreach (var tName in _townsMap.Keys) {
-                        if (searchText.Contains(tName)) {
+                    foreach (var tName in _townsMap.Keys)
+                    {
+                        if (searchText.Contains(tName))
+                        {
                             detectedTownName = tName;
                             break;
                         }
@@ -126,16 +158,21 @@ namespace CalradiaAiBridge {
                 }
 
                 int detectedItemId = -1;
-                if (hasFetchIntent) {
-                    if (_itemsMap.Count > 0) {
-                        foreach (var itemKey in _itemsMap.Keys.OrderByDescending(k => k.Length)) {
+                if (hasFetchIntent)
+                {
+                    if (_itemsMap.Count > 0)
+                    {
+                        foreach (var itemKey in _itemsMap.Keys.OrderByDescending(k => k.Length))
+                        {
                             if (msgLower.Contains(itemKey) && itemKey.Length >= 3) // ensure we don't match on "a" or "an"
                             {
                                 detectedItemId = _itemsMap[itemKey];
                                 break;
                             }
                         }
-                    } else {
+                    }
+                    else
+                    {
                         // Fallback mapping if python didn't load
                         var itemsMap = new Dictionary<string, int> {
                             {"best sword", 13}, {"sword", 13}, {"food", 111}, {"bread", 122},
@@ -150,9 +187,11 @@ namespace CalradiaAiBridge {
                             {"grain", 120}, {"beef", 121}, {"chicken", 123},
                             {"chickens", 123}, {"pork", 124}, {"butter", 125}
                         };
-
-                        foreach (var itemKey in itemsMap.Keys.OrderByDescending(k => k.Length)) {
-                            if (msgLower.Contains(itemKey)) {
+                        
+                        foreach (var itemKey in itemsMap.Keys.OrderByDescending(k => k.Length))
+                        {
+                            if (msgLower.Contains(itemKey))
+                            {
                                 detectedItemId = itemsMap[itemKey];
                                 break;
                             }
@@ -164,31 +203,42 @@ namespace CalradiaAiBridge {
 
                 var tasks = new List<Tuple<int, int>>();
                 var tasksMatch = Regex.Match(cleanResponse, @"\[TASKS:\s*([^\]]+)\]", RegexOptions.IgnoreCase);
-                if (tasksMatch.Success) {
+                if (tasksMatch.Success)
+                {
                     string tasksStr = tasksMatch.Groups[1].Value.Trim();
                     string[] parts = tasksStr.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (string partRaw in parts) {
+                    foreach (string partRaw in parts)
+                    {
                         string part = partRaw.Trim().ToLower();
-                        if (part.Contains("move|") || part.Contains("go|") || part.Contains("travel|") || part.Contains("ride|")) {
+                        if (part.Contains("move|") || part.Contains("go|") || part.Contains("travel|") || part.Contains("ride|"))
+                        {
                             string[] sep = part.Split('|');
-                            if (sep.Length > 1) {
+                            if (sep.Length > 1)
+                            {
                                 string tName = sep[1].Trim();
-                                if (_townsMap.ContainsKey(tName)) {
+                                if (_townsMap.ContainsKey(tName))
+                                {
                                     tasks.Add(Tuple.Create(1, _townsMap[tName]));
                                 }
                             }
-                        } else if (part.Contains("fetch|") || part.Contains("buy|") || part.Contains("get|")) {
+                        }
+                        else if (part.Contains("fetch|") || part.Contains("buy|") || part.Contains("get|"))
+                        {
                             string[] sep = part.Split('|');
-                            if (sep.Length > 1) {
+                            if (sep.Length > 1)
+                            {
                                 string iName = sep[1].Trim();
                                 int itemId = -1;
-                                foreach (var itemKey in _itemsMap.Keys.OrderByDescending(k => k.Length)) {
-                                    if (iName.Contains(itemKey) && itemKey.Length >= 3) {
+                                foreach (var itemKey in _itemsMap.Keys.OrderByDescending(k => k.Length))
+                                {
+                                    if (iName.Contains(itemKey) && itemKey.Length >= 3)
+                                    {
                                         itemId = _itemsMap[itemKey];
                                         break;
                                     }
                                 }
-                                if (itemId == -1) {
+                                if (itemId == -1)
+                                {
                                     var commonItems = new Dictionary<string, int> {
                                         {"best sword", 13}, {"sword", 13}, {"food", 111}, {"bread", 122},
                                         {"armor", 130}, {"horse", 9}, {"shield", 10}, {"bow", 6},
@@ -202,68 +252,97 @@ namespace CalradiaAiBridge {
                                         {"grain", 120}, {"beef", 121}, {"chicken", 123},
                                         {"chickens", 123}, {"pork", 124}, {"butter", 125}
                                     };
-                                    foreach (var key in commonItems.Keys) {
-                                        if (iName.Contains(key)) {
+                                    foreach (var key in commonItems.Keys)
+                                    {
+                                        if (iName.Contains(key))
+                                        {
                                             itemId = commonItems[key];
                                             break;
                                         }
                                     }
                                 }
-                                if (itemId != -1) {
+                                if (itemId != -1)
+                                {
                                     tasks.Add(Tuple.Create(2, itemId));
                                 }
                             }
-                        } else if (part.Contains("return") || part.Contains("back")) {
+                        }
+                        else if (part.Contains("return") || part.Contains("back"))
+                        {
                             tasks.Add(Tuple.Create(3, 0));
                         }
                     }
                 }
 
-                if (tasks.Count == 0 && isCompanion && hasMoveIntent && detectedTownName != null) {
+                if (tasks.Count == 0 && isCompanion && hasMoveIntent && detectedTownName != null)
+                {
                     int townId = _townsMap.ContainsKey(detectedTownName) ? _townsMap[detectedTownName] : -1;
-                    if (townId != -1) {
+                    if (townId != -1)
+                    {
                         tasks.Add(Tuple.Create(1, townId));
-                        if (detectedItemId != -1) {
+                        if (detectedItemId != -1)
+                        {
                             tasks.Add(Tuple.Create(2, detectedItemId));
                             tasks.Add(Tuple.Create(3, 0));
                         }
                     }
                 }
 
-                if (isCompanion && tasks.Count > 0) {
+                if (isCompanion && tasks.Count > 0)
+                {
                     outData["action"] = 2;
                     outData["actionPresent"] = 1;
                     outData["moveTarget"] = tasks[0].Item2;
                     outData["task_count"] = tasks.Count;
-                    for (int i = 0; i < tasks.Count; i++) {
-                        outData[$"task_{i + 1}_type"] = tasks[i].Item1;
-                        outData[$"task_{i + 1}_val"] = tasks[i].Item2;
+                    for (int i = 0; i < tasks.Count; i++)
+                    {
+                        outData[string.Format("task_{0}_type", i + 1)] = tasks[i].Item1;
+                        outData[string.Format("task_{0}_val", i + 1)] = tasks[i].Item2;
                     }
 
                     var buyTask = tasks.FirstOrDefault(t => t.Item1 == 2);
-                    if (buyTask != null) {
+                    if (buyTask != null)
+                    {
                         outData["fetchItem"] = buyTask.Item2;
                     }
-                } else if (isElder && isThreat) {
+                }
+                else if (isElder && isThreat)
+                {
                     outData["action"] = 1;
                     outData["actionPresent"] = 1;
-                } else if (hasHostileTag && (isElder || isThreat || _currentBridgeMode == "player2_hotseat" || _currentBridgeMode == "player2_api")) {
+                }
+                else if (hasHostileTag && (isElder || isThreat || _currentBridgeMode == "player2_hotseat" || _currentBridgeMode == "player2_api"))
+                {
                     outData["action"] = 1;
                     outData["actionPresent"] = 1;
-                } else if (isCompanion && new[] { "rescue", "find", "lost", "where" }.Any(w => msgLower.Contains(w))) {
+                }
+                else if (isCompanion && new[] { "rescue", "find", "lost", "where" }.Any(w => msgLower.Contains(w)))
+                {
                     outData["action"] = 3;
                     outData["actionPresent"] = 1;
                 }
 
                 string cleanSansTags = Regex.Replace(cleanResponse, @"\[[^\]]+\]", " ").Trim();
                 cleanSansTags = Regex.Replace(cleanSansTags, @"\s+", " ").Trim();
+                if (string.IsNullOrWhiteSpace(cleanSansTags) || cleanSansTags == "...")
+                {
+                    if (isCompanion && tasks.Count > 0)
+                        cleanSansTags = "At once, my lord. I shall see to it immediately.";
+                    else if (isCompanion)
+                        cleanSansTags = "Aye, my lord. I stand ready.";
+                    else
+                        cleanSansTags = "I hear you, traveler. What is your will?";
+                }
                 outData["response"] = cleanSansTags;
 
-                for (int i = 0; i < 5; i++) {
-                    try {
+                for (int i = 0; i < 5; i++)
+                {
+                    try
+                    {
                         File.WriteAllText(OutputFile, JsonSerializer.Serialize(outData));
                         break;
-                    } catch (IOException) { await Task.Delay(10); }
+                    }
+                    catch (IOException) { await Task.Delay(10); }
                 }
 
                 if (_currentBridgeMode != "player2_hotseat")
@@ -271,7 +350,9 @@ namespace CalradiaAiBridge {
                 else
                     Console.WriteLine(string.Format("[SUCCESS] Player 2 Answer sent to Calradia! Response: \"{0}\"", cleanSansTags));
 
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine("!!! Processing Error: " + ex.Message);
             }
         }

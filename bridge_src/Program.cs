@@ -4,15 +4,17 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System;
 
-namespace CalradiaAiBridge {
-    partial class Program {
+namespace CalradiaAiBridge
+{
+    partial class Program
+    {
         // --- CONFIGURATION HUB ---
-        static string DefaultMode = "";
+        static string DefaultMode = ""; 
         static string OpenRouterApiKey = "";
         static string CloudModelId = "";
         static string CloudAPIEndpoint = "";
@@ -23,7 +25,6 @@ namespace CalradiaAiBridge {
         // API endpoints
         static string P2ChatUrl = "https://api.player2.game/v1/chat/completions";
         static string P2HealthUrl = "https://api.player2.game/v1/health";
-        static string P2AppLogin = "http://localhost:4315/v1/login/web/019e3c62-2a9e-7de3-a7ea-9222669593f4";
         static string P2DeviceNew = "https://api.player2.game/v1/login/device/new";
         static string P2DeviceToken = "https://api.player2.game/v1/login/device/token";
         static string GameClientId = "019e3c62-2a9e-7de3-a7ea-9222669593f4";
@@ -31,17 +32,22 @@ namespace CalradiaAiBridge {
         static string ConfigFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
         static string _p2Key = "";
 
-        static int GetPlayer2AppPort() {
-            try {
+        static int GetPlayer2AppPort()
+        {
+            try
+            {
                 string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string portFile = Path.Combine(appData, "game.player2.client", "api.port");
-                if (File.Exists(portFile)) {
+                if (File.Exists(portFile))
+                {
                     string portStr = File.ReadAllText(portFile).Trim();
-                    if (int.TryParse(portStr, out int port)) {
+                    if (int.TryParse(portStr, out int port))
+                    {
                         return port;
                     }
                 }
-            } catch { }
+            }
+            catch { }
             return 4315; // default port
         }
 
@@ -115,59 +121,107 @@ namespace CalradiaAiBridge {
             {"rushdigh", 200}
         };
 
+        
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        static extern bool AllocConsole();
 
-        static Dictionary<string, int> _itemsMap = new Dictionary<string, int>();
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        static extern IntPtr GetConsoleWindow();
+
+        static void EnsureConsole()
+        {
+            try
+            {
+                if (GetConsoleWindow() == IntPtr.Zero)
+                {
+                    if (AllocConsole())
+                    {
+                        var stdOut = Console.OpenStandardOutput();
+                        Console.SetOut(new StreamWriter(stdOut, System.Text.Encoding.Default) { AutoFlush = true });
+                        var stdIn = Console.OpenStandardInput();
+                        Console.SetIn(new StreamReader(stdIn, System.Text.Encoding.Default));
+                        var stdErr = Console.OpenStandardError();
+                        Console.SetError(new StreamWriter(stdErr, System.Text.Encoding.Default) { AutoFlush = true });
+                    }
+                }
+            }
+            catch { }
+        }
 
         [STAThread]
-        static void Main( string[] args ) {
-            try {
-                // Run updater check in background (fire-and-forget or wait slightly)
-                _ = AutoUpdater.CheckForUpdatesAsync();
+        static void Main(string[] args)
+        {
+            try
+            {
+                EnsureConsole();
+                try { Console.Title = "Calradia AI Bridge System"; } catch { }
+                Console.WriteLine("[INFO] Calradia AI Bridge Console initialized.");
 
-                // Attempt to parse items map
+                // Attempt to parse items and NPC character prompts
                 LoadItemsMap();
-
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-
+                LoadNpcCharacterPrompts();
+                
                 AppConfig config = new AppConfig();
                 bool shouldStart = false;
 
-                if (File.Exists(ConfigFile)) {
-                    try {
+                if (File.Exists(ConfigFile))
+                {
+                    try
+                    {
                         var jsonStr = File.ReadAllText(ConfigFile);
-                        var parsed = JsonSerializer.Deserialize<AppConfig>(jsonStr);
+                        var parsed = JsonSerializer.Deserialize<AppConfig>(jsonStr, _jsonOptions);
                         if (parsed != null) config = parsed;
-                    } catch { }
+                    }
+                    catch { }
                 }
 
-                using (var form = new Form()) {
-                    form.Text = "Calradia AI Bridge Settings";
-                    form.Size = new Size(500, 600);
-                    form.StartPosition = FormStartPosition.CenterScreen;
+                bool skipGui = args.Length > 0 && args.Any(a => 
+                    new[] { "cloud", "local", "player2_api", "player2_hotseat", "player2_app", "--start", "-s", "--nogui" }
+                    .Contains(a.ToLower().Trim()));
 
-                    var grid = new PropertyGrid();
-                    grid.SelectedObject = config;
-                    grid.Dock = DockStyle.Fill;
-                    grid.ToolbarVisible = false;
+                if (skipGui)
+                {
+                    Console.WriteLine("[INFO] Starting directly from command line arguments...");
+                    shouldStart = true;
+                }
+                else
+                {
+                    Console.WriteLine("[INFO] Opening Settings dialog. Configure settings or click 'Save Settings & Start Server'.");
+                    Application.EnableVisualStyles();
+                    Application.SetCompatibleTextRenderingDefault(false);
 
-                    var pnl = new Panel() { Dock = DockStyle.Bottom, Height = 45 };
-                    var btnStart = new Button() { Text = "Save Settings && Start Server", Dock = DockStyle.Fill, BackColor = Color.LightGreen, Font = new Font(form.Font, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
+                    using (var form = new Form())
+                    {
+                        form.Text = "Calradia AI Bridge Settings";
+                        form.Size = new Size(500, 600);
+                        form.StartPosition = FormStartPosition.CenterScreen;
 
-                    btnStart.Click += ( s, e ) => {
-                        try { File.WriteAllText(ConfigFile, JsonSerializer.Serialize(config)); } catch { }
-                        shouldStart = true;
-                        form.Close();
-                    };
-                    pnl.Controls.Add(btnStart);
+                        var grid = new PropertyGrid();
+                        grid.SelectedObject = config;
+                        grid.Dock = DockStyle.Fill;
+                        grid.ToolbarVisible = false;
+                        
+                        var pnl = new Panel() { Dock = DockStyle.Bottom, Height = 45 };
+                        var btnStart = new Button() { Text = "Save Settings && Start Server", Dock = DockStyle.Fill, BackColor = Color.LightGreen, Font = new Font(form.Font, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
+                        
+                        btnStart.Click += (s, e) =>
+                        {
+                            try { File.WriteAllText(ConfigFile, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })); } catch { }
+                            shouldStart = true;
+                            form.Close();
+                        };
+                        pnl.Controls.Add(btnStart);
+                        
+                        form.Controls.Add(grid);
+                        form.Controls.Add(pnl);
 
-                    form.Controls.Add(grid);
-                    form.Controls.Add(pnl);
-
-                    Application.Run(form);
+                        Application.Run(form);
+                    }
                 }
 
-                if (!shouldStart) {
+                if (!shouldStart)
+                {
                     Console.WriteLine("Setup closed. Exiting...");
                     return;
                 }
@@ -175,8 +229,27 @@ namespace CalradiaAiBridge {
                 // Apply logic
                 DefaultMode = config.DefaultMode.ToString();
                 OpenRouterApiKey = config.OpenRouterApiKey;
-                CloudAPIEndpoint = config.CloudAPIEndpoint;
+                CloudAPIEndpoint = string.IsNullOrWhiteSpace(config.CloudAPIEndpoint) ? "https://openrouter.ai/api/v1/chat/completions" : config.CloudAPIEndpoint.Trim();
                 CloudModelId = config.CloudModelId;
+                string[] obsoleteModels = new string[]
+                {
+                    "meta-llama/llama-3.3-70b-instruct:free",
+                    "meta-llama/llama-3.1-8b-instruct:free",
+                    "qwen/qwen-2.5-72b-instruct:free",
+                    "google/gemini-2.0-flash-lite-preview-02-05:free",
+                    "deepseek/deepseek-r1:free",
+                    "mistralai/mistral-7b-instruct:free",
+                    "openrouter/free",
+                    "nvidia/nemotron-3.5-content-safety:free"
+                };
+
+                if (string.IsNullOrWhiteSpace(CloudModelId) || obsoleteModels.Any(o => CloudModelId.Equals(o, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Console.WriteLine(string.Format("[INFO] Upgrading deprecated cloud model '{0}' to 'google/gemma-4-31b-it:free'...", CloudModelId));
+                    CloudModelId = "google/gemma-4-31b-it:free";
+                    config.CloudModelId = CloudModelId;
+                    try { File.WriteAllText(ConfigFile, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true })); } catch { }
+                }
                 LocalApiUrl = config.LocalApiUrl;
                 LocalModelId = config.LocalModelId;
                 Player2ApiKey = config.Player2ApiKey;
@@ -185,59 +258,20 @@ namespace CalradiaAiBridge {
                 OutputFile = Path.Combine(WatchDir, "From AI Chat.json");
 
                 Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine("Fatal Error: " + ex.Message);
+                Console.WriteLine("\nPress any key to exit...");
+                try { Console.ReadKey(); } catch { }
             }
         }
 
-        static void LoadItemsMap() {
-            try {
-                // Common item mappings aligned with this module's actual item positions
-                _itemsMap["sword"] = 13;
-                _itemsMap["best sword"] = 13;
-                _itemsMap["food"] = 111;   // smoked fish (first food item)
-                _itemsMap["bread"] = 122;
-                _itemsMap["armor"] = 130;  // arena_armor_white
-                _itemsMap["horse"] = 9;    // tutorial_saddle_horse
-                _itemsMap["shield"] = 10;   // tutorial_shield
-                _itemsMap["bow"] = 6;      // tutorial_short_bow
-                _itemsMap["arrows"] = 4;   // tutorial_arrows
-                _itemsMap["axe"] = 14;     // tutorial_axe
-                _itemsMap["spear"] = 1;    // tutorial_spear
-                _itemsMap["mace"] = 2;     // tutorial_club
-                _itemsMap["ale"] = 110;    // merchandise ale
-                _itemsMap["wine"] = 109;   // merchandise wine
-                _itemsMap["smoked_fish"] = 111;
-                _itemsMap["smoked fish"] = 111;
-                _itemsMap["fish"] = 111;
-                _itemsMap["cheese"] = 112;
-                _itemsMap["honey"] = 113;
-                _itemsMap["sausages"] = 114;
-                _itemsMap["cabbages"] = 115;
-                _itemsMap["cabbage"] = 115;
-                _itemsMap["dried_meat"] = 116;
-                _itemsMap["dried meat"] = 116;
-                _itemsMap["meat"] = 116;
-                _itemsMap["apples"] = 117;
-                _itemsMap["fruit"] = 117;
-                _itemsMap["grapes"] = 118;
-                _itemsMap["olives"] = 119;
-                _itemsMap["grain"] = 120;
-                _itemsMap["beef"] = 121;
-                _itemsMap["chicken"] = 123;
-                _itemsMap["chickens"] = 123;
-                _itemsMap["pork"] = 124;
-                _itemsMap["butter"] = 125;
-
-                Console.WriteLine($"[INFO] Loaded {_itemsMap.Count} item mappings.");
-            } catch (Exception ex) {
-                Console.WriteLine("[WARNING] Failed to load item mappings: " + ex.Message);
-            }
-        }
-
-        static async Task MainAsync( string[] args ) {
+        static async Task MainAsync(string[] args)
+        {
             _currentBridgeMode = DefaultMode;
-            if (args.Length > 0) {
+            if (args.Length > 0)
+            {
                 var chosen = args[0].ToLower().Trim();
                 if (new[] { "cloud", "local", "player2_api", "player2_hotseat", "player2_app" }.Contains(chosen))
                     _currentBridgeMode = chosen;
@@ -252,7 +286,8 @@ namespace CalradiaAiBridge {
             Console.WriteLine(" Watched Folder: " + WatchDir);
             Console.WriteLine("============================================================");
 
-            if (_currentBridgeMode == "player2_api" || _currentBridgeMode == "player2_app") {
+            if (_currentBridgeMode == "player2_api" || _currentBridgeMode == "player2_app")
+            {
                 await Authenticate();
                 StartHealthPing();
             }
@@ -260,24 +295,26 @@ namespace CalradiaAiBridge {
             if (File.Exists(InputFile)) File.WriteAllText(InputFile, "{}");
             File.WriteAllText(OutputFile, "{}");
 
-            if (!Directory.Exists(WatchDir)) {
+            if (!Directory.Exists(WatchDir))
+            {
                 Console.WriteLine("[ERROR] Watch directory '{0}' does not exist! Please check the path.", WatchDir);
                 return;
             }
 
-            using (var watcher = new FileSystemWatcher(WatchDir)) {
+            using (var watcher = new FileSystemWatcher(WatchDir))
+            {
                 watcher.NotifyFilter = NotifyFilters.LastWrite;
                 watcher.Filter = "To AI Chat.json";
                 watcher.Changed += OnFileChanged;
                 watcher.EnableRaisingEvents = true;
 
                 Console.WriteLine("Watcher started. Press Ctrl+C to exit.");
-
+                
                 var tcs = new TaskCompletionSource<bool>();
-                Console.CancelKeyPress += ( s, e ) => { e.Cancel = true; tcs.SetResult(true); };
+                Console.CancelKeyPress += (s, e) => { e.Cancel = true; tcs.SetResult(true); };
                 await tcs.Task;
             }
-
+            
             Console.WriteLine("\nShutting down AI Bridge watcher... See you in Calradia!");
         }
     }

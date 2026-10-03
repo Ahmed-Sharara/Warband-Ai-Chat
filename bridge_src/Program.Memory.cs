@@ -2,25 +2,35 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 
-namespace CalradiaAiBridge {
-    partial class Program {
+namespace CalradiaAiBridge
+{
+    partial class Program
+    {
         // --- Memory Helpers ---
-        static List<Dictionary<string, string>> UpdateMemory( string key, string systemPrompt, string userText ) {
-            if (!_memoryDb.ContainsKey(key)) {
+        static List<Dictionary<string, string>> UpdateMemory(string key, string systemPrompt, string userText)
+        {
+            if (!_memoryDb.ContainsKey(key))
+            {
                 var initList = new List<Dictionary<string, string>>();
                 initList.Add(new Dictionary<string, string> { { "role", "system" }, { "content", systemPrompt } });
                 _memoryDb[key] = initList;
+            }
+            else if (_memoryDb[key].Count > 0 && _memoryDb[key][0].ContainsKey("role") && _memoryDb[key][0]["role"] == "system")
+            {
+                _memoryDb[key][0]["content"] = systemPrompt;
             }
             var list = new List<Dictionary<string, string>>(_memoryDb[key]);
             list.Add(new Dictionary<string, string> { { "role", "user" }, { "content", userText } });
             return list;
         }
 
-        static void UpdateMemoryResult( string key, string userText, string aiText ) {
+        static void UpdateMemoryResult(string key, string userText, string aiText)
+        {
             _memoryDb[key].Add(new Dictionary<string, string> { { "role", "user" }, { "content", userText } });
             _memoryDb[key].Add(new Dictionary<string, string> { { "role", "assistant" }, { "content", aiText } });
 
-            if (_memoryDb[key].Count > 9) {
+            if (_memoryDb[key].Count > 9)
+            {
                 var sysMsg = _memoryDb[key][0];
                 var recent = _memoryDb[key].Skip(_memoryDb[key].Count - 8).ToList();
                 recent.Insert(0, sysMsg);
